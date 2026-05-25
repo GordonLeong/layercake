@@ -1,78 +1,71 @@
 # Layer Cake
 
-> Headless Svelte visualization framework where `LayerCake` computes chart state (scales/domains/layout) and user components render marks.
+> Headless Svelte charting framework that computes scales, domains, ranges, and layout context while you provide rendering components.
 
 ## Identity
 
 - **Name**: layercake
 - **Version**: 10.0.2 (analyzed)
-- **Language**: JavaScript (ESM) + Svelte 5 components
+- **Language**: JavaScript (ESM) + Svelte components
 - **License**: MIT
 - **Install**: `npm install layercake`
 
 ## Purpose
 
-Layer Cake is a chart composition runtime for Svelte. It is not a prebuilt chart catalog; it is infrastructure that centralizes chart measurements, channel accessors, extent/domain resolution, and scale setup so child layers can render with consistent coordinates. LayerChart itself is built on this foundation, so when LayerChart lacks a specialized mark, direct LayerCake usage is the escape hatch for custom visualization math. The primary abstraction is a shared context contract: one parent (`LayerCake`) computes state, while multiple rendering layers (`Svg`, `Canvas`, `Html`, `ScaledSvg`, `WebGL`) and user-defined mark components consume that state.
+Layer Cake is a composition framework for data visualization in Svelte. The `LayerCake` component owns measurement, scale creation, domain/range inference, and context propagation; child layout components (`Svg`, `Canvas`, `Html`, `ScaledSvg`, `WebGL`) and your own mark components consume that context to draw charts. The package also exports utility helpers (`calcExtents`, `calcUniques`, `flatten`, `bin`, `stack`, etc.) so data preparation and scale math can match runtime behavior.
 
 ## When to Use / When NOT to Use
 
 **Use when**:
-- You are authoring custom chart marks and want reusable scale/layout plumbing.
-- You need multiple render targets (SVG + Canvas + HTML overlays) on one coordinate system.
-- You want domain/range defaults plus precise override hooks for edge cases.
-- You need chart data helpers that mirror runtime behavior (`calcExtents`, `calcUniques`, `stack`, `bin`, `flatten`).
+- You are building custom Svelte charts and want reusable scale/layout plumbing without committing to fixed chart types.
+- You need mixed render layers (for example axes in SVG + marks in Canvas/HTML) sharing one coordinate system.
+- Your data shape is irregular and you need manual domain/range overrides while keeping automatic defaults for the rest.
 
 **Do not use when**:
-- You need prebuilt chart types with minimal custom code (use higher-level chart libraries).
-- You are outside Svelte runtime components.
-- You need only static one-off D3 scripts without reactive context and slot composition.
+- You need a no-code chart catalog (use a declarative charting library with predefined marks).
+- You are not using Svelte runtime components.
+- You only need standalone D3 helpers without reactive component context (use D3 directly).
 
 ## Core Concepts
 
-- **Accessor normalization** — `x/y/z/r` inputs can be keys, functions, numbers, or arrays; LayerCake converts them into callable accessors.
-- **Flat data pipeline** — Scale calculations require flat rows. If source `data` is nested, supply `flatData` explicitly.
-- **Extent vs domain** — Extents are raw data-derived bounds/uniques; domains are final scale inputs after merging user overrides.
-- **Partial domains** — Passing `null` in a domain pair (`[0, null]`) keeps one side computed and one side fixed.
-- **Scale assembly** — Per channel, LayerCake sets domain, default/custom range, optional padding expansion, and optional `.nice()`.
-- **Dynamic y-direction** — `yReverse` defaults depend on scale type (`bandwidth` scales default to non-reversed).
-- **Context-first rendering** — Child components use context stores (`xScale`, `xGet`, `width`, etc.) instead of recomputing chart math.
-- **Layered rendering** — Independent layout components share computed chart state for precise overlay behavior.
+- **Accessors (`x`, `y`, `z`, `r`)** — Each channel accepts key/function/number/array input and is normalized into accessor functions.
+- **Flat data vs `flatData`** — `data` can be nested, but scale calculations require a flat array; pass `flatData` when `data` is hierarchical.
+- **Extents and domains** — Layer Cake computes extents from data, then resolves final domains by merging computed values with optional partial/manual domains.
+- **Scale factories** — Channel scales default to `scaleLinear` (`x`,`y`,`z`) and `scaleSqrt` (`r`), then get domain/range/padding/nice transforms.
+- **Layout components** — `Svg`, `Canvas`, `Html`, `ScaledSvg`, and `WebGL` position rendering layers inside one measured chart box.
+- **Context contract** — Child components pull stores like `xScale`, `xGet`, `width`, `padding`, and domains from Svelte context key `LayerCake`.
+- **Domain sort controls** — For ordinal-like channels, `xDomainSort`/`yDomainSort`/etc control whether unique-domain results are sorted or in encounter order.
 
 ## Quick Start
 
 ```svelte
 <script>
-  import { LayerCake, Svg, Canvas, Html } from 'layercake';
+  import { LayerCake, Svg } from 'layercake';
 
   const data = [
-    { x: 0, y: 4, label: 'A' },
-    { x: 1, y: 7, label: 'B' },
-    { x: 2, y: 3, label: 'C' }
+    { x: 0, y: 4 },
+    { x: 1, y: 7 },
+    { x: 2, y: 3 }
   ];
 </script>
 
 <div style="width: 640px; height: 320px;">
-  <LayerCake x="x" y="y" {data} padding={{ top: 8, right: 8, bottom: 24, left: 30 }}>
+  <LayerCake x="x" y="y" {data}>
     <Svg let:xGet let:yGet let:data>
       {#each data as d}
-        <circle cx={xGet(d)} cy={yGet(d)} r="4" fill="#333" />
+        <circle cx={xGet(d)} cy={yGet(d)} r="4" fill="#444" />
       {/each}
     </Svg>
-
-    <Canvas><!-- optional dense marks --></Canvas>
-    <Html><!-- optional tooltips/labels --></Html>
   </LayerCake>
 </div>
 ```
 
 ## Detail Files
 
-- `llms-full/api-core.md` — Full public API map: components, helper exports, prop groups, and behavior contracts.
-- `llms-full/patterns.md` — Copy-pasteable usage patterns: nested data, partial domains, layered rendering, and D3 helper options.
-- `llms-full/antipatterns.md` — Common misuses grounded in source/tested behavior, with corrected alternatives.
-- `llms-full/config.md` — Configuration reference for LayerCake and layout props, defaults, constraints, and production-style setup.
-- `llms-full/errors.md` — Error model: throw conditions, warning conditions, causes, and exact recovery actions.
-- `llms-full/integrations.md` — Dependency and runtime integration points (Svelte context, Canvas, WebGL, D3).
-- `llms-full/stability.md` — Semver behavior, major-version breaks, deprecations, and compatibility guidance.
-- `llms-full/recipes-advanced.md` — Advanced direct-to-LayerCake recipes for custom marks (including belief ellipses) when LayerChart abstractions are insufficient.
-- `llms-full/agent-playbook.md` — Execution checklist for coding agents building novel marks directly with LayerCake (data-space math, projection, and validation workflow).
+- `llms-full/api-core.md` — Public exports, signatures, and behavior for `LayerCake`, layouts, and utility helpers.
+- `llms-full/patterns.md` — Idiomatic usage patterns extracted from tests and source behavior.
+- `llms-full/antipatterns.md` — Real failure modes from thrown errors, defaults, and migration/deprecation notes.
+- `llms-full/config.md` — Configuration surface for `LayerCake` props and package/runtime constraints.
+- `llms-full/errors.md` — Error model and concrete error recovery playbook for helper APIs and runtime warnings.
+- `llms-full/integrations.md` — Required/optional dependencies and integration points with Svelte, D3, and rendering contexts.
+- `llms-full/stability.md` — Versioning behavior, breaking changes, and deprecated API guidance from changelog/source.
