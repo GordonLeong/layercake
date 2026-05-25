@@ -1,175 +1,72 @@
 # Core API
 
 ## Overview
-`layercake` exposes one stateful chart orchestrator (`LayerCake`), five render-layer components, and utility functions for data transformation and scale preparation. The central mental model is: **you own marks, LayerCake owns chart math and context wiring**.
+This package exports one orchestration component (`LayerCake`), five layout components, and data/scale helpers. Import from `layercake` package root.
 
----
+## Exports
 
-## Package Root Exports
-Import all public APIs from:
+### `LayerCake`
+- **Signature**: `LayerCake(props)` Svelte component.
+- **Returns**: rendered container + context stores.
+- **Behavior**: Measures container, normalizes accessors, computes extents/domains/scales/ranges, and exposes these via slot props and context key `LayerCake`.
+- **Key props**: `data`, `flatData`, `x|y|z|r`, `xDomain|yDomain|zDomain|rDomain`, `xScale|yScale|zScale|rScale`, `xRange|yRange|zRange|rRange`, `padding`, `percentRange`, `xNice|yNice|zNice|rNice`, `xDomainSort|yDomainSort|zDomainSort|rDomainSort`, `debug`, `verbose`, `ssr`.
 
-```js
-import { ... } from 'layercake';
-```
+### Layout Components
 
-### Component Exports
-- `LayerCake`
-- `Html`
-- `Svg`
-- `ScaledSvg`
-- `Canvas`
-- `WebGL`
+#### `Svg`
+- **Signature**: `Svg(props)`.
+- **Behavior**: Absolute-positioned `<svg>` aligned to chart padding; supports `titleText`/`title` snippet, `defs`, accessibility attrs, `overflow`.
 
-### Utility Exports
-- `scaleCanvas`
-- `flatten`
-- `uniques`
-- `calcExtents`
-- `raise`
-- `takeEvery`
-- `bin`
-- `stack`
-- `groupLonger`
+#### `ScaledSvg`
+- **Signature**: `ScaledSvg(props)`.
+- **Behavior**: SVG variant that scales with chart dimensions and context coordinates.
 
----
+#### `Html`
+- **Signature**: `Html(props)`.
+- **Behavior**: HTML overlay layer aligned to same chart box.
 
-## `LayerCake` Component
+#### `Canvas`
+- **Signature**: `Canvas(props)`.
+- **Behavior**: Creates 2D context, pixel-ratio scales it with `scaleCanvas`, and provides `canvas` context store (`ctx`).
 
-### Role
-The chart orchestrator. It:
-1. Measures container width/height.
-2. Converts `x/y/z/r` definitions into accessors.
-3. Computes extents and domains.
-4. Instantiates and configures D3 scales.
-5. Exposes stores/context/slot-props to child layers.
+#### `WebGL`
+- **Signature**: `WebGL(props)`.
+- **Behavior**: Creates WebGL context (`webgl`/fallback names) and provides `gl` context store.
 
-### Important Props (grouped by responsibility)
+### Helper Functions
 
-#### Data and Accessors
-- `data: Array<Object> | Object` — source data.
-- `flatData?: Array<Object>` — flat rows for scale computation when `data` is nested.
-- `x | y | z | r` — accessor definitions (`string | number | function | array`), normalized internally.
+#### `scaleCanvas`
+- **Signature**: `scaleCanvas(context: CanvasRenderingContext2D, width: number, height: number): void`
+- **Behavior**: Scales canvas for high-DPI rendering.
 
-#### Domains
-- `xDomain | yDomain | zDomain | rDomain`
-  - accepts explicit arrays, partial arrays with `null` (`[0, null]`), or a function `(computedDomain) => newDomain`.
+#### `flatten`
+- **Signature**: `flatten(list: Array<any>, accessor?: string|Function): Array<any>`
+- **Behavior**: Flattens exactly one level if accessor result is an array; otherwise returns input list unchanged.
 
-#### Scales
-- `xScale | yScale | zScale | rScale`
-  - defaults: linear, linear, linear, sqrt.
-  - pass D3 scale factories/instances to override.
+#### `uniques`
+- **Signature**: `uniques(data: Array<any>, accessor?: string|Function): Array<any>`
+- **Behavior**: Returns unique values preserving encounter order.
 
-#### Ranges and Direction
-- `xRange | yRange | zRange | rRange` — explicit range array or range function receiving `{ width, height }`.
-- `xReverse | yReverse | zReverse | rReverse` — reverse default ranges.
-- `percentRange` — force default ranges to `[0, 100]` (except `r` min remains logic-compatible through range handling).
+#### `calcExtents`
+- **Signature**: `calcExtents(data: Array<object>, fields: Record<string, Function>): Record<string,[any,any]>`
+- **Behavior**: Computes min/max per field, skipping `false`, `undefined`, `null`, and `NaN`; supports array-valued accessors.
 
-#### Scale Post-processing
-- `xPadding | yPadding | zPadding | rPadding` — pixel-based domain expansion via scale inversion logic.
-- `xNice | yNice | zNice | rNice` — run `.nice()` when available.
-- `xDomainSort | yDomainSort | zDomainSort | rDomainSort` — sorting behavior for unique categorical domains.
+#### `raise`
+- **Signature**: `raise(el: SVGElement): void`
+- **Behavior**: Reorders an SVG element to front.
 
-#### Layout/Runtime
-- `padding` — chart inner margin object.
-- `width | height` — manual dimension overrides.
-- `ssr` — SSR-safe rendering mode.
-- `debug` — debounced debug logging.
-- `verbose` — runtime warnings (like zero-sized container).
-- `pointerEvents`, `position` — wrapper-level behavior.
+#### `takeEvery`
+- **Signature**: `takeEvery(list: Array<any>, n: number): Array<any>`
+- **Behavior**: Returns every nth element.
 
-### What `LayerCake` Produces for Children
-Child components access stores/context such as:
-- geometry: `width`, `height`, `containerWidth`, `containerHeight`, `aspectRatio`, `padding`
-- data: `data`, `flatData`, `extents`
-- scales/domains/ranges: `xScale`, `yScale`, `zScale`, `rScale`, `xDomain`, ..., `xRange`, ...
-- mapped getters: `xGet`, `yGet`, `zGet`, `rGet`
+#### `bin`
+- **Signature**: `bin<T>(data: T[], value?: string|number|((d:T)=>number)|null, options?: {domain?: [number,number], thresholds?: number|number[]|Function}): Array<T[] & {x0:number;x1:number}>`
+- **Behavior**: Wrapper over `d3-array` binning.
 
-### Minimal Example
-```svelte
-<script>
-  import { LayerCake, Svg } from 'layercake';
-  const data = [{ x: 0, y: 1 }, { x: 1, y: 3 }];
-</script>
+#### `stack`
+- **Signature**: `stack(data: Array<any>, keys: Array<string>, options?: {value?: string|number|Function, order?: Array<any>|Function, offset?: Function}): Array<any>`
+- **Behavior**: Wrapper over `d3-shape` stack for stacked charts.
 
-<div style="width:600px;height:300px;">
-  <LayerCake x="x" y="y" {data}>
-    <Svg let:data let:xGet let:yGet>
-      {#each data as d}
-        <circle cx={xGet(d)} cy={yGet(d)} r="3" />
-      {/each}
-    </Svg>
-  </LayerCake>
-</div>
-```
-
----
-
-## Layout Components
-
-## `Svg`
-Use for vector rendering (axes, lines, labels, defs, markers).
-- Accessibility props: `label`, `labelledBy`, `describedBy`.
-- Title options:
-  - `titleText` prop (simple).
-  - `title` snippet (advanced; takes precedence).
-- `defs` snippet for SVG defs.
-- `overflow` prop (`'visible'` or `'hidden'`).
-
-## `ScaledSvg`
-SVG-oriented layer variant for scaled output contexts. Use when you need the same chart context with scaled-svg behavior (for example export-oriented composition).
-
-## `Html`
-Absolute-positioned HTML layer aligned to chart box. Use for tooltip portals, rich labels, or DOM interactions that are easier in HTML than SVG.
-
-## `Canvas`
-Canvas rendering layer.
-- Initializes 2D context on mount.
-- Runs `scaleCanvas(context, width, height)` for DPI correctness.
-- Exposes context via Svelte context key `canvas` with store `ctx`.
-
-## `WebGL`
-WebGL rendering layer.
-- Tries context names in order: `webgl`, `experimental-webgl`, `moz-webgl`, `webkit-3d`.
-- Accepts `contextAttributes`.
-- Exposes context via key `gl` with store `gl`.
-
----
-
-## Utility APIs
-
-### `flatten(list, accessor = d => d)`
-Flattens one level only when accessor returns arrays.
-- If input is not array: returns input unchanged.
-- Accessor can be string key or function.
-
-### `uniques(list, accessor, transform = true)`
-Returns unique values in encounter order (used for categorical workflows).
-
-### `calcExtents(data, fields)`
-Computes min/max per field.
-- `fields` is an object map: `{ x: d => d.x }`.
-- Skips `false`, `undefined`, `null`, and `NaN`.
-- If accessor returns arrays, all elements are considered.
-
-### `bin(data, value?, options?)`
-Wrapper over `d3-array/bin`.
-- Supports `value` accessor as function/string/number.
-- Supports `domain` and `thresholds` pass-through.
-- Returns bins with `x0` and `x1` boundaries.
-
-### `stack(data, keys, options?)`
-Wrapper over `d3-shape/stack`.
-- `keys` must be array of series names.
-- Optional `value`, `order`, `offset` pass-through.
-
-### `groupLonger(data, keys, keyName?, valueName?)`
-Transforms wide rows to long-form rows for grouped/stacked workflows.
-
-### `takeEvery(list, n)`
-Sampling helper (every nth item).
-
-### `raise(el)`
-Reorders SVG nodes for hover/focus layering.
-
-### `scaleCanvas(ctx, width, height)`
-Canvas DPR scaling helper.
+#### `groupLonger`
+- **Signature**: `groupLonger(data, keys, keyName?, valueName?)`
+- **Behavior**: Converts wide rows into long form key/value rows.

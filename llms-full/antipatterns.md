@@ -5,21 +5,21 @@
 ```js
 calcExtents({ not: 'an array' }, { x: d => d.x });
 ```
-**Why it breaks**: `calcExtents` throws `TypeError` when first arg is not an array; `uniques` logs an error and returns `null` for non-array input.
+**Why it breaks**: `calcExtents` and `calcUniques` throw `TypeError` when first arg is not an array.
 **Do this instead**:
 ```js
 calcExtents(rowsArray, { x: d => d.x });
 ```
 
-## Using non-public `calcUniques` import from package root
+## Using legacy `fields` array API for `calcExtents`/`calcUniques`
 **What you might do**:
 ```js
-import { calcUniques } from 'layercake'; // fails: not exported
+calcUniques(data, [{ field: 'x', accessor: d => d.x }]);
 ```
-**Why it breaks**: `calcUniques` is an internal helper and is not exported from package root.
+**Why it breaks**: helpers now require an object map `{ x: accessor }`, not array descriptors.
 **Do this instead**:
 ```js
-uniques(data, d => d.x);
+calcUniques(data, { x: d => d.x });
 ```
 
 ## Expecting `yReverse` default to always be true

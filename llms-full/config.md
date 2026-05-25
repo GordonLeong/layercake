@@ -1,110 +1,55 @@
 # Configuration
 
 ## Config Method
-LayerCake configuration is **prop-driven**. There are no config files or env vars for chart behavior.
+Programmatic via Svelte component props on `LayerCake` and layout components.
 
-## LayerCake Props Reference
-
-### Data + Accessors
+## LayerCake Reference (high-impact keys)
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `data` | `Array<Object>\|Object` | `[]` | Source dataset used in chart composition. |
-| `flatData` | `Array<Object>` | `data` | Flat rows for extent/domain calculations. |
-| `x`,`y`,`z`,`r` | `string\|number\|Function\|Array` | `undefined` | Channel definitions converted to accessors. |
+| `data` | `Array<Object>\|Object` | `[]` | Source dataset. |
+| `flatData` | `Array<Object>` | `data` | Flat rows used for scale calculations. |
+| `x`,`y`,`z`,`r` | `string\|number\|Function\|Array` | `undefined` | Channel accessors. |
+| `xScale`,`yScale`,`zScale`,`rScale` | D3 scale factory/instance | linear/linear/linear/sqrt | Per-channel scale selection. |
+| `xDomain`...`rDomain` | `Array\|Function\|undefined` | auto | Domain overrides (supports partial `null`). |
+| `xRange`...`rRange` | `Array\|Function\|undefined` | auto | Range overrides. |
+| `xPadding`...`rPadding` | `[number, number]` | `undefined` | Domain padding in pixels (converted through scale). |
+| `xNice`,`yNice`,`zNice`,`rNice` | `boolean\|number` | `false` | Calls scale `.nice()` when available. |
+| `xReverse`,`yReverse`,`zReverse`,`rReverse` | `boolean` | `false`,`dynamic`,`false`,`false` | Reverses default range direction. |
+| `xDomainSort`...`rDomainSort` | `boolean` | `false` | Sorts calculated unique domains for ordinal scales. |
+| `padding` | `{top,right,bottom,left}` | all `0` | Inner chart padding. |
+| `percentRange` | `boolean` | `false` | Forces default ranges to `[0,100]`. |
+| `width`,`height` | `number` | measured | Override measured container dimensions. |
+| `ssr` | `boolean` | `false` | Enables server-safe rendering path. |
+| `debug` | `boolean` | `false` | Debounced console diagnostics for scales and box. |
+| `verbose` | `boolean` | `true` | Enables warning logs (e.g., zero-size container). |
 
-### Scale Selection
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `xScale` | D3 scale | `scaleLinear` | X channel scale. |
-| `yScale` | D3 scale | `scaleLinear` | Y channel scale. |
-| `zScale` | D3 scale | `scaleLinear` | Z channel scale. |
-| `rScale` | D3 scale | `scaleSqrt` | Radius channel scale. |
+## Runtime/package constraints
+- Node engine: `^20.17.0 || >=22.9.0`.
+- Peer deps: `svelte >=5`, `typescript ^5.0.2`.
 
-### Domain Control
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `xDomain`,`yDomain`,`zDomain`,`rDomain` | `Array\|Function\|undefined` | computed | Manual, partial (`null`), or computed-domain transform override. |
-| `xDomainSort`,`yDomainSort`,`zDomainSort`,`rDomainSort` | `boolean` | `false` | Sort computed unique domains for categorical channels. |
-
-### Range + Direction
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `xRange`,`yRange`,`zRange`,`rRange` | `Array\|Function\|undefined` | computed | Override default ranges or derive from `{width,height}`. |
-| `xReverse` | `boolean` | `false` | Reverse default x range. |
-| `yReverse` | `boolean\|undefined` | dynamic | Defaults to `true` for non-bandwidth scales, else `false`. |
-| `zReverse` | `boolean` | `false` | Reverse z range. |
-| `rReverse` | `boolean` | `false` | Reverse r range. |
-| `percentRange` | `boolean` | `false` | Use `[0,100]` base ranges. |
-
-### Domain/Scale Post-processing
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `xPadding`,`yPadding`,`zPadding`,`rPadding` | `[number, number]` | `undefined` | Pixel padding converted into domain expansion. |
-| `xNice`,`yNice`,`zNice`,`rNice` | `boolean\|number` | `false` | Apply `.nice()` when supported by scale. |
-
-### Layout + Runtime
-| Key | Type | Default | Description |
-|---|---|---|---|
-| `padding` | `{top,right,bottom,left}` | all `0` | Inner chart margin. |
-| `width`,`height` | `number` | measured | Manual dimensions if container measurement is not desired. |
-| `pointerEvents` | `boolean` | `true` | Wrapper pointer-events control. |
-| `position` | `string` | `'relative'` | Wrapper positioning (`'absolute'` used for stacking cakes). |
-| `ssr` | `boolean` | `false` | SSR-safe render path. |
-| `debug` | `boolean` | `false` | Debounced console diagnostics. |
-| `verbose` | `boolean` | `true` | Enable warnings (e.g., zero-size container). |
-| `custom` | `Object` | `{}` | User-defined values passed through context. |
-
-## Layout Component Config Highlights
-
-### `Svg`
-- `titleText`, `title` snippet, `defs` snippet.
-- accessibility props (`label`, `labelledBy`, `describedBy`).
-- `overflow` prop for clipping behavior.
-
-### `Canvas`
-- `fallback` text prop.
-- bindables: `element`, `context` (2D context).
-
-### `WebGL`
-- `contextAttributes` for context creation options.
-- bindables: `element`, `context` (WebGL context).
-
-## Runtime/Package Constraints
-- Node: `^20.17.0 || >=22.9.0`
-- Peer dependencies:
-  - `svelte >=5`
-  - `typescript ^5.0.2`
-
-## Minimal Config Example
+## Minimal Example
 ```svelte
 <LayerCake x="x" y="y" {data} />
 ```
 
-## Production-style Example
+## Production Example
 ```svelte
 <script>
-  import { LayerCake, Svg, Canvas } from 'layercake';
+  import { LayerCake } from 'layercake';
   import { scaleBand, scaleLinear } from 'd3-scale';
-
-  export let rows;
 </script>
 
-<div style="width:100%;height:420px;">
-  <LayerCake
-    data={rows}
-    flatData={rows}
-    x="category"
-    y="value"
-    xScale={scaleBand().padding(0.2)}
-    yScale={scaleLinear()}
-    yDomain={[0, null]}
-    yNice={true}
-    xDomainSort={true}
-    padding={{ top: 10, right: 16, bottom: 30, left: 44 }}
-    verbose={true}
-  >
-    <Svg />
-    <Canvas />
-  </LayerCake>
-</div>
+<LayerCake
+  data={rows}
+  flatData={rows}
+  x="category"
+  y="value"
+  xScale={scaleBand().padding(0.2)}
+  yScale={scaleLinear()}
+  yDomain={[0, null]}
+  yNice={true}
+  xDomainSort={true}
+  padding={{ top: 10, right: 16, bottom: 24, left: 40 }}
+  verbose={true}
+/>
 ```

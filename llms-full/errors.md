@@ -10,10 +10,10 @@ Most validation errors are synchronous `TypeError` throws in helper functions. C
 - **Common cause**: passing nested object as `data` without flattening.
 - **Recovery**: pass flat rows and object accessor map (`{ x: d => ... }`).
 
-### `uniques` non-array input error path
-- **Raised when**: input is not an array.
-- **Common cause**: calling `uniques` before data load is complete.
-- **Recovery**: guard input shape; `uniques` returns `null` and logs an error instead of throwing.
+### `TypeError` from `calcUniques`
+- **Raised when**: same shape violations as `calcExtents`.
+- **Common cause**: using deprecated array-of-field descriptors.
+- **Recovery**: convert to object map syntax.
 
 ### `TypeError` from `bin`
 - **Raised when**: first arg not object/array.
